@@ -60,8 +60,8 @@ broki/
 
 ```bash
 # Clone the repo
-git clone https://github.com/Zhandolia/broki.git
-cd broki
+git clone https://github.com/Zhandolia/zeta-engine.git
+cd zeta-engine
 
 # Serve the portfolio locally
 cd portfolio
