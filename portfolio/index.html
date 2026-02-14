@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>ζ-Field Poker AI — Live Strategy Analysis</title>
+  <meta name="description"
+    content="Advanced quantitative models: Heston SV, GARCH, Merton jump-diffusion, Lévy processes, and game-theoretic poker AI with live information field analysis.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=6">
+</head>
+
+<body>
+  <!-- ═══ NAV ═══ -->
+  <nav id="nav">
+    <div class="nav-brand">ζ<span>-Field</span></div>
+    <div class="nav-links">
+      <a href="#hero">Home</a>
+      <a href="#models">Model</a>
+      <a href="#poker">Poker AI</a>
+      <a href="#about">About</a>
+    </div>
+  </nav>
+
+  <!-- ═══ HERO ═══ -->
+  <section id="hero">
+    <canvas id="hero-canvas"></canvas>
+    <div class="hero-content">
+      <p class="hero-tag">GAME THEORY & QUANTITATIVE ANALYSIS</p>
+      <h1>Poker AI<br><span class="gradient-text">ζ-Field Engine</span></h1>
+      <p class="hero-desc">8-component game-theoretic field mapping equity × pot-odds space. Monte Carlo simulation
+        feeds a continuous decision surface — play against it live.</p>
+      <div class="hero-btns">
+        <a href="#poker" class="btn btn-primary">Play Poker AI</a>
+        <a href="#models" class="btn btn-secondary">View Model</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ MODEL (Poker AI Deep-Dive) ═══ -->
+  <section id="models">
+    <h2 class="section-title">The <span class="gradient-text">Model</span></h2>
+    <p class="section-sub">A deep look inside the ζ-field poker engine — how math drives every decision</p>
+
+    <!-- Formula Banner -->
+    <div class="formula-banner">
+      <div class="formula-label">CORE FIELD EQUATION</div>
+      <div class="formula-main">
+        Ψ(e, p) = V<sub>equity</sub> + R<sub>raise</sub> + C<sub>call</sub> + F<sub>fold</sub> + B<sub>bluff</sub> +
+        S<sub>street</sub> + J<sub>jump</sub> + Γ<sub>strength</sub>
+      </div>
+      <div class="formula-desc">
+        An 8-component continuous field over equity × pot-odds space. Each component captures a distinct
+        strategic force — value, aggression, defense, pressure, deception, timing, threshold effects, and hand strength.
+        Together they produce a smooth surface whose gradient points toward the optimal play.
+      </div>
+    </div>
+
+    <!-- Component Breakdown -->
+    <h3 class="model-section-title">Field Components</h3>
+    <p class="model-section-sub">Each component models a distinct strategic force in the decision space</p>
+
+    <div class="component-cards-grid">
+      <div class="comp-card" style="--accent:#00ff80">
+        <div class="comp-card-header">
+          <span class="comp-symbol">V</span>
+          <span class="comp-name">Equity Peak</span>
+        </div>
+        <div class="comp-formula">V = 65 · exp(-3(e−ê)² − 1.5(p−p̂)²)</div>
+        <p class="comp-desc">Gaussian peak centered on hero's equity and pot-odds. The "you are here" marker anchoring
+          the field.</p>
+      </div>
+
+      <div class="comp-card" style="--accent:#ff2020">
+        <div class="comp-card-header">
+          <span class="comp-symbol">R</span>
+          <span class="comp-name">Raise Pressure</span>
+        </div>
+        <div class="comp-formula">R = 50 · e<sup>2.5</sup> · exp(-2(p−0.4)²) · (1+0.3s)</div>
+        <p class="comp-desc">Aggression surface — rises sharply with equity, peaks at moderate pot odds. Street
+          multiplier makes late raises more impactful.</p>
+      </div>
+
+      <div class="comp-card" style="--accent:#00c8ff">
+        <div class="comp-card-header">
+          <span class="comp-symbol">C</span>
+          <span class="comp-name">Call Defense</span>
+        </div>
+        <div class="comp-formula">C = 35 · exp(-5(e−0.45)²) · (1−p) · exp(-(p−p̂)²)</div>
+        <p class="comp-desc">Defensive ridge at ~45% equity — the "not great, not terrible" zone. Decays as pot odds
+          rise and over-calls become costly.</p>
+      </div>
+
+      <div class="comp-card" style="--accent:#4080ff">
+        <div class="comp-card-header">
+          <span class="comp-symbol">F</span>
+          <span class="comp-name">Fold Gravity</span>
+        </div>
+        <div class="comp-formula">F = −20 · (1−e)² · p · exp(-0.5e²)</div>
+        <p class="comp-desc">Negative basin pulling weak hands toward fold. Grows with pot odds and low equity — the
+          "your chips go here to die" zone.</p>
+      </div>
+
+      <div class="comp-card" style="--accent:#ff8000">
+        <div class="comp-card-header">
+          <span class="comp-symbol">B</span>
+          <span class="comp-name">Bluff Surface</span>
+        </div>
+        <div class="comp-formula">B = 18 · (1−e)<sup>2.5</sup> · α · exp(-3(p−0.6)²)</div>
+        <p class="comp-desc">Deception surface — peaks for weak hands facing specific pot-odds. Modulated by aggression
+          factor, enabling profitable bluffs.</p>
+      </div>
+
+      <div class="comp-card" style="--accent:#a060ff">
+        <div class="comp-card-header">
+          <span class="comp-symbol">J</span>
+          <span class="comp-name">Jump Threshold</span>
+        </div>
+        <div class="comp-formula">J = 15 · tanh(8(e − p̂)) · exp(-2(p − p̂)²)</div>
+        <p class="comp-desc">Sharp sigmoid near break-even. Models the "cliff" where small equity changes flip optimal
+          action. Creates a rapid decision boundary.</p>
+      </div>
+    </div>
+
+    <!-- Architecture Pipeline -->
+    <h3 class="model-section-title">Engine Architecture</h3>
+    <p class="model-section-sub">Three-stage pipeline from deal to recommendation</p>
+
+    <div class="architecture-pipeline">
+      <div class="pipe-stage">
+        <div class="pipe-icon">🎰</div>
+        <div class="pipe-title">Monte Carlo</div>
+        <div class="pipe-desc">2,400 random rollouts per street. Produces equity with <span
+            class="pipe-highlight">±1.5%</span> precision.</div>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-stage">
+        <div class="pipe-icon">📐</div>
+        <div class="pipe-title">ζ-Field Eval</div>
+        <div class="pipe-desc">Equity + pot odds feed 8-component Ψ(e,p). <span class="pipe-highlight">Field
+            gradient</span> reveals optimal direction.</div>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-stage">
+        <div class="pipe-icon">🎯</div>
+        <div class="pipe-title">Decision</div>
+        <div class="pipe-desc">Dominant component maps to <span class="pipe-highlight">RAISE / CALL / FOLD</span> with
+          EV + confidence.</div>
+      </div>
+    </div>
+
+    <!-- How It Works — with GIF -->
+    <div class="model-walkthrough">
+      <div class="walkthrough-visual">
+        <img src="assets/poker_game_analysis.gif" alt="Live field analysis during gameplay" loading="lazy">
+      </div>
+      <div class="walkthrough-text">
+        <h3>Live Field Analysis</h3>
+        <p>Every state change — card dealt, bet placed, raise made — triggers a full recompute of the Ψ(e,p) field in
+          real-time.</p>
+        <div class="walkthrough-steps">
+          <div class="ws"><span class="ws-num">1</span> Hole cards dealt → Monte Carlo estimates raw equity</div>
+          <div class="ws"><span class="ws-num">2</span> Community cards → equity crystallizes, range narrows</div>
+          <div class="ws"><span class="ws-num">3</span> Opponent bets → pot odds shift, field transforms</div>
+          <div class="ws"><span class="ws-num">4</span> Heatmap renders full action surface with decision marker</div>
+          <div class="ws"><span class="ws-num">5</span> Model Insight shows dominant components + recommendation</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Game Theory Section -->
+    <div class="model-theory-section">
+      <h3 class="model-section-title">Game-Theoretic Foundation</h3>
+      <p class="model-section-sub">The mathematical principles behind unexploitable play</p>
+      <div class="theory-grid">
+        <div class="theory-card">
+          <h4>Nash Equilibrium</h4>
+          <p>At equilibrium, no player can improve EV by unilaterally changing strategy. The ζ-field's zero-crossing
+            contour tracks the Nash boundary — where aggressive and defensive forces balance.</p>
+          <div class="theory-formula">max<sub>σ</sub> E[u(σ, σ<sub>−i</sub>)] = E[u(σ*, σ*<sub>−i</sub>)]</div>
+        </div>
+        <div class="theory-card">
+          <h4>Counterfactual Regret</h4>
+          <p>CFR minimizes "regret" — the gap between each action's historical payoff and the best in hindsight. Over
+            iterations, strategies converge to equilibrium. Component weights are tuned via this framework.</p>
+          <div class="theory-formula">R<sup>T</sup>(a) = Σ<sub>t</sub> [u(a, σ<sup>t</sup><sub>−i</sub>) −
+            u(σ<sup>t</sup>, σ<sup>t</sup><sub>−i</sub>)]</div>
+        </div>
+        <div class="theory-card">
+          <h4>Information Asymmetry</h4>
+          <p>Poker is incomplete information — you never see opponent cards. The field models uncertainty via equity
+            distribution width: preflop has wide Gaussians, river has narrow peaks.</p>
+          <div class="theory-formula">H(X) = −Σ p(x) · log p(x)</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ POKER GAME ═══ -->
+  <section id="poker">
+    <h2 class="section-title">Live Poker <span class="gradient-text">ζ-Engine</span></h2>
+    <p class="section-sub">Play Texas Hold'em against the AI — field analyzes every move in real-time</p>
+
+    <div class="poker-layout">
+      <!-- LEFT: Field heatmap -->
+      <div class="poker-field-panel">
+        <div class="panel-header">
+          <span class="panel-dot red"></span><span class="panel-dot yellow"></span><span class="panel-dot green"></span>
+          <span class="panel-title">ζ-FIELD HEATMAP</span>
+        </div>
+        <canvas id="field-canvas" width="400" height="400"></canvas>
+        <div class="field-legend">
+          <span class="legend-item"><span class="swatch" style="background:#0a1268"></span>FOLD</span>
+          <span class="legend-item"><span class="swatch" style="background:#30c0c8"></span>CALL</span>
+          <span class="legend-item"><span class="swatch" style="background:#c01010"></span>RAISE</span>
+        </div>
+        <div id="field-info" class="field-info">
+          <div>Equity: <span id="fi-equity">—</span></div>
+          <div>Pot Odds: <span id="fi-potodds">—</span></div>
+          <div>EV: <span id="fi-ev">—</span></div>
+        </div>
+        <div class="model-commentary" id="model-commentary">
+          <div class="commentary-header">MODEL INSIGHT</div>
+          <div class="c-context" style="font-style:italic;opacity:0.7">Deal a hand to activate the ζ-field engine</div>
+        </div>
+        <div class="suggestion-line" id="suggestion-line">
+          <span class="suggestion-icon" id="suggestion-icon">💡</span>
+          <span class="suggestion-text" id="suggestion-text">Press DEAL to start playing</span>
+        </div>
+      </div>
+
+      <!-- CENTER: Game Table -->
+      <div class="poker-table-panel">
+        <div class="table-felt">
+          <!-- Opponent -->
+          <div class="player-area opp">
+            <div class="player-label">VILLAIN (AI)</div>
+            <div class="player-cards" id="opp-cards"></div>
+            <div class="player-stack" id="opp-stack">$500</div>
+          </div>
+
+          <!-- Community -->
+          <div class="community-area">
+            <div class="community-cards" id="community-cards"></div>
+            <div class="pot-display" id="pot-display">POT: $0</div>
+          </div>
+
+          <!-- Hero -->
+          <div class="player-area hero">
+            <div class="player-label">YOU</div>
+            <div class="player-cards" id="hero-cards"></div>
+            <div class="player-stack" id="hero-stack">$500</div>
+          </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls" id="controls">
+          <button class="ctrl-btn fold" id="btn-fold" onclick="pokerUI.fold()">FOLD</button>
+          <button class="ctrl-btn call" id="btn-call" onclick="pokerUI.call()">CALL</button>
+          <div class="raise-group">
+            <input type="range" id="raise-slider" min="1" max="100" value="50">
+            <button class="ctrl-btn raise" id="btn-raise" onclick="pokerUI.raise()">RAISE $<span
+                id="raise-val">50</span></button>
+          </div>
+          <button class="ctrl-btn deal" id="btn-deal" onclick="pokerUI.newHand()">DEAL</button>
+        </div>
+
+        <!-- Recommendation -->
+        <div class="recommendation" id="recommendation">
+          <div class="rec-action" id="rec-action">DEAL TO START</div>
+          <div class="rec-details" id="rec-details">Click DEAL to begin a hand</div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Stats -->
+      <div class="poker-stats-panel">
+        <div class="panel-header">
+          <span class="panel-dot red"></span><span class="panel-dot yellow"></span><span class="panel-dot green"></span>
+          <span class="panel-title">LIVE ANALYSIS</span>
+        </div>
+        <div class="stat-block">
+          <div class="stat-label">STREET</div>
+          <div class="stat-value" id="stat-street">—</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-label">HAND</div>
+          <div class="stat-value" id="stat-hand">—</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-label">EQUITY</div>
+          <div class="stat-value" id="stat-equity">—</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-label">POT ODDS</div>
+          <div class="stat-value" id="stat-potodds">—</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-label">EV</div>
+          <div class="stat-value" id="stat-ev">—</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-label">CONFIDENCE</div>
+          <div class="stat-value" id="stat-conf">—</div>
+        </div>
+        <hr class="stat-divider">
+        <div class="stat-block">
+          <div class="stat-label">HANDS PLAYED</div>
+          <div class="stat-value" id="stat-hands">0</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-label">WIN RATE</div>
+          <div class="stat-value" id="stat-winrate">—</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-label">PROFIT</div>
+          <div class="stat-value" id="stat-profit">$0</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-label">FORMULA</div>
+          <div class="stat-formula">Ψ(e,p) = V + R + C + F + B + S + J + Γ</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ ABOUT ═══ -->
+  <section id="about">
+    <h2 class="section-title">About</h2>
+    <div class="about-content">
+      <div class="about-text">
+        <h3>Quantitative Researcher & Game Theory Engineer</h3>
+        <p>Specialized in advanced mathematical modeling for financial markets and strategic decision-making under
+          uncertainty. Experience with institutional-grade stochastic processes, computational game theory, and
+          real-time optimization systems.</p>
+        <div class="skills-grid">
+          <div class="skill-group">
+            <h4>Stochastic Calculus</h4>
+            <ul>
+              <li>Heston SDE</li>
+              <li>Jump-Diffusion</li>
+              <li>Lévy Processes</li>
+              <li>fBm</li>
+            </ul>
+          </div>
+          <div class="skill-group">
+            <h4>Statistical Models</h4>
+            <ul>
+              <li>GARCH</li>
+              <li>HMM</li>
+              <li>Copulas</li>
+              <li>Higher Moments</li>
+            </ul>
+          </div>
+          <div class="skill-group">
+            <h4>Game Theory</h4>
+            <ul>
+              <li>Nash Equilibrium</li>
+              <li>CFR</li>
+              <li>Bayesian Inference</li>
+              <li>Information Theory</li>
+            </ul>
+          </div>
+          <div class="skill-group">
+            <h4>Languages</h4>
+            <ul>
+              <li>Python</li>
+              <li>JavaScript</li>
+              <li>R</li>
+              <li>Java</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>ζ-Field Poker AI Engine — Game theory meets mathematics</p>
+  </footer>
+
+  <script type="module" src="poker/ui.js?v=6"></script>
+  <script src="main.js?v=6"></script>
+</body>
+
+</html>
