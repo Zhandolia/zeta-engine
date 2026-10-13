@@ -6,10 +6,9 @@
 
 ## 🎯 Live Demo
 
-Open `portfolio/index.html` in your browser to:
-- **Play Texas Hold'em** against the AI with real-time field analysis
-- **Explore the Model** — formula breakdown, architecture pipeline, game theory foundations
-- **Watch the heatmap** shift as each card is dealt and every bet is placed
+The site has two pages:
+- **Play** (`index.html`) — heads-up Texas Hold'em against the AI, with the model's suggestion, equity, pot odds, EV and the field heatmap next to the table
+- **How it works** (`how-it-works.html`) — the pipeline, the decision rule, the field formula, and an interactive explorer
 
 ## 🧮 The Model
 
@@ -31,7 +30,8 @@ The engine evaluates every decision through an 8-component continuous field:
 ## 🏗 Architecture
 
 ```
-Monte Carlo (2,400 rollouts) → ζ-Field Eval (8 components) → Decision (RAISE/CALL/FOLD)
+Monte Carlo equity (1,200 rollouts vs a random hand) + pot odds → decision rule (BET/RAISE/CHECK/CALL/FOLD)
+                                                                → ζ-field heatmap (visualization)
 ```
 
 ## 📁 Project Structure
@@ -39,14 +39,15 @@ Monte Carlo (2,400 rollouts) → ζ-Field Eval (8 components) → Decision (RAIS
 ```
 broki/
 ├── portfolio/              # Web application
-│   ├── index.html          # Main page — hero, model deep-dive, poker game, about
-│   ├── style.css           # Full dark-theme styling with glassmorphism
-│   ├── main.js             # Hero canvas animation, scroll effects, nav
+│   ├── index.html          # Play page — the game
+│   ├── how-it-works.html   # Model explanation + interactive field explorer
+│   ├── style.css           # Styles for both pages
 │   ├── poker/
 │   │   ├── engine.js       # Card evaluation, Monte Carlo simulation, hand ranking
-│   │   ├── field.js        # ζ-field computation, commentary, heatmap rendering
-│   │   ├── game.js         # Game state machine, AI opponent logic
-│   │   └── ui.js           # DOM rendering, user controls, structured commentary
+│   │   ├── field.js        # ζ-field computation, heatmap rendering, recommendation
+│   │   ├── game.js         # Game state machine, AI opponent logic, action log
+│   │   ├── ui.js           # Play page rendering and controls
+│   │   └── explore.js      # How-it-works explorer
 │   └── assets/             # GIFs and images
 ├── poker_game_field.py     # Python implementation of the ζ-field model
 ├── zeta_field_advanced.py  # Advanced field with Heston/GARCH/Lévy components
@@ -72,11 +73,11 @@ python3 -m http.server 8080
 
 ## 🃏 Game Features
 
-- **Real-time ζ-field heatmap** — watch the action surface shift with every card
-- **Model Insight panel** — structured commentary with headline, stats, and context
-- **Live Analysis sidebar** — equity, pot odds, EV, confidence per hand
-- **AI opponent** — makes decisions using the same field model
-- **Suggestion bar** — real-time recommended action with confidence
+- **Model suggestion** — one recommended action with a plain-English reason; the matching button is highlighted
+- **Live numbers** — equity, equity needed to call, and dollar EV of calling
+- **Real-time ζ-field heatmap** — your spot plotted on the equity × pot-odds plane
+- **Action log** — what you and the villain did this hand
+- **AI opponent** — tight-aggressive thresholds on its own Monte Carlo equity (800 rollouts)
 
 ## 🔬 Research Implementations
 

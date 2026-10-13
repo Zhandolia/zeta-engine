@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How It Works — ζ-Field Poker</title>
+  <meta name="description"
+    content="How the ζ-Field poker model reads a hand: Monte Carlo equity, pot odds, a decision rule, and the action-field heatmap.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=7">
+</head>
+
+<body class="page-doc">
+  <header class="topbar">
+    <a class="brand" href="index.html">ζ-Field <span>Poker</span></a>
+    <nav>
+      <a href="index.html">Play</a>
+      <a href="how-it-works.html" aria-current="page">How it works</a>
+    </nav>
+  </header>
+
+  <main class="doc">
+    <h1>How the model works</h1>
+    <p class="lede">Everything runs in your browser; there is no server. Each time it's your turn, the page
+      estimates how often your hand wins, compares that to the price of calling, and applies a short rule to pick an
+      action. The heatmap is a picture of those same two numbers.</p>
+
+    <ol class="steps">
+      <li>
+        <h3>Equity, by simulation</h3>
+        <p>The engine deals 1,200 random hands to the villain and random cards for the rest of the board, then counts how
+          often you win. Ties count as half. That win rate is your <em>equity</em>. With 1,200 samples it is accurate to
+          about ±3 points.</p>
+      </li>
+      <li>
+        <h3>Pot odds: the price</h3>
+        <p><code>call ÷ (pot + call)</code> is the minimum equity a call needs to break even. Calling $20 into a $60 pot
+          needs 20 ÷ 80 = 25%.</p>
+      </li>
+      <li>
+        <h3>Decision rule</h3>
+        <p>Equity and pot odds go through the thresholds in the <a href="#rules">table below</a>. The result is the
+          suggested action, plus the dollar EV of calling.</p>
+      </li>
+      <li>
+        <h3>Action field</h3>
+        <p>An eight-term function Ψ is drawn over every equity × pot-odds pair, with your spot marked. It shows where
+          your spot sits relative to the fold, call and raise regions.</p>
+      </li>
+    </ol>
+
+    <section id="explore" class="explore">
+      <h2>Try it</h2>
+      <p>Move the sliders to see what the model suggests and how the field changes. This uses the same code as the
+        game.</p>
+      <div class="explore-grid">
+        <div class="explore-canvas">
+          <canvas id="explore-canvas" width="400" height="400"></canvas>
+          <div class="field-legend">
+            <div class="ramp" aria-hidden="true"></div>
+            <div class="ramp-labels"><span>Fold</span><span>Call</span><span>Raise</span></div>
+          </div>
+        </div>
+        <div class="explore-side">
+          <label class="ctl">
+            <span>Your equity <output id="o-eq">55%</output></span>
+            <input type="range" id="x-eq" min="0" max="100" value="55">
+          </label>
+          <label class="ctl">
+            <span>Pot odds (needed to call) <output id="o-po">25%</output></span>
+            <input type="range" id="x-po" min="0" max="50" value="25">
+          </label>
+          <div class="ctl-row">
+            <label class="ctl">
+              <span>Street</span>
+              <select id="x-street">
+                <option value="0">Pre-flop</option>
+                <option value="1" selected>Flop</option>
+                <option value="2">Turn</option>
+                <option value="3">River</option>
+              </select>
+            </label>
+            <label class="ctl">
+              <span>Made hand</span>
+              <select id="x-hand">
+                <option value="0">High card</option>
+                <option value="1" selected>One pair</option>
+                <option value="2">Two pair</option>
+                <option value="3">Three of a kind</option>
+                <option value="4">Straight</option>
+                <option value="5">Flush</option>
+                <option value="6">Full house</option>
+                <option value="7">Four of a kind</option>
+                <option value="8">Straight flush</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="advice compact" id="x-advice">
+            <div class="eyebrow">Model suggests</div>
+            <div class="action" id="x-action">—</div>
+            <p class="reason" id="x-reason"></p>
+          </div>
+
+          <div class="comp-bars">
+            <div class="eyebrow">Field terms at your spot</div>
+            <div id="x-bars"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="rules">
+      <h2>The decision rule</h2>
+      <p>The suggestion comes from these four lines. The value bar rises 5 points per street (65% pre-flop, 70% flop,
+        75% turn, 80% river) because later bets are larger and harder to recover from.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Situation</th>
+              <th>Condition</th>
+              <th>Suggestion</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Any</td>
+              <td>equity &gt; value bar</td>
+              <td><b class="t-raise">Bet</b> 60% of the pot, or <b class="t-raise">Raise</b> if facing a bet</td>
+            </tr>
+            <tr>
+              <td>No bet to face</td>
+              <td>otherwise</td>
+              <td><b class="t-call">Check</b></td>
+            </tr>
+            <tr>
+              <td>Facing a bet</td>
+              <td>equity &gt; pot odds − 5 and equity &gt; 30%</td>
+              <td><b class="t-call">Call</b></td>
+            </tr>
+            <tr>
+              <td>Facing a bet</td>
+              <td>otherwise</td>
+              <td><b class="t-fold">Fold</b></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="formula">EV of calling = equity × (pot + call) − call</p>
+    </section>
+
+    <section id="field">
+      <h2>The action field Ψ</h2>
+      <p>Ψ adds eight terms over the plane of equity <var>e</var> and pot odds <var>p</var> (both 0–1). Each term
+        favors one kind of action in one region. <var>ê</var> and <var>p̂</var> are your current equity and pot odds,
+        <var>s</var> is the street (0–3), <var>a</var> is bet ÷ pot, and <var>h</var> is your made hand on a 0–1 scale.
+      </p>
+      <p class="formula">Ψ(e, p) = V + R + C + F + B + S + J + Γ</p>
+      <div class="table-wrap">
+        <table class="terms">
+          <thead>
+            <tr>
+              <th></th>
+              <th>Term</th>
+              <th>Formula</th>
+              <th>What it does</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="sym">V</td>
+              <td>Your spot</td>
+              <td><code>65·exp(−3(e−ê)² − 1.5(p−p̂)²)</code></td>
+              <td>A peak centered on where you are.</td>
+            </tr>
+            <tr>
+              <td class="sym">R</td>
+              <td>Raise</td>
+              <td><code>50·e<sup>2.5</sup>·exp(−2(p−0.4)²)·(1+0.3s)</code></td>
+              <td>Grows steeply with equity and on later streets.</td>
+            </tr>
+            <tr>
+              <td class="sym">C</td>
+              <td>Call</td>
+              <td><code>35·exp(−5(e−0.45)²)·(1−p)·exp(−(p−p̂)²)</code></td>
+              <td>A ridge around 45% equity that fades as calls get expensive.</td>
+            </tr>
+            <tr>
+              <td class="sym">F</td>
+              <td>Fold</td>
+              <td><code>−20·(1−e)²·p·exp(−0.5e²)</code></td>
+              <td>Negative where equity is low and the price is high.</td>
+            </tr>
+            <tr>
+              <td class="sym">B</td>
+              <td>Bluff</td>
+              <td><code>18·(1−e)<sup>2.5</sup>·a·exp(−3(p−0.6)²)</code></td>
+              <td>Weak hands facing large bets; scales with bet size.</td>
+            </tr>
+            <tr>
+              <td class="sym">S</td>
+              <td>Street</td>
+              <td><code>8·s·e(1−e)·sin(πp)</code></td>
+              <td>Adds weight to medium hands as the hand goes on.</td>
+            </tr>
+            <tr>
+              <td class="sym">J</td>
+              <td>Break-even jump</td>
+              <td><code>15·tanh(8(e−p̂))·exp(−2(p−p̂)²)</code></td>
+              <td>A sharp step where equity crosses the price of calling.</td>
+            </tr>
+            <tr>
+              <td class="sym">Γ</td>
+              <td>Made hand</td>
+              <td><code>10·h·e·exp(−0.5(p−0.5)²)</code></td>
+              <td>Rewards hands that are already made (pairs, straights…).</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p>The heatmap is re-colored from its own minimum (blue) to maximum (red) every time it is drawn, so colors show
+        where your spot sits relative to the rest of the plane. Ψ is a visualization: the suggestion comes from the
+        decision rule above, not from Ψ.</p>
+    </section>
+
+    <section id="villain">
+      <h2>How the villain plays</h2>
+      <p>The villain runs its own 800-hand simulation on its cards. It cannot see yours.</p>
+      <ul>
+        <li><b>Nobody has bet:</b> it bets if its equity is above 60%. Between 40% and 60% it bets 30% of the time.
+          Otherwise it checks. Bets are 50–80% of the pot.</li>
+        <li><b>Facing a bet:</b> above 55% equity it raises 40% of the time and calls otherwise. Below that it calls
+          when its equity beats the pot odds by 5 points. Otherwise it folds, except for a random call 8% of the
+          time.</li>
+      </ul>
+    </section>
+
+    <section id="assumptions">
+      <h2>Assumptions</h2>
+      <ul>
+        <li>Equity is measured against a <em>random</em> hand. It does not narrow the villain's range based on how the
+          villain has bet.</li>
+        <li>Heads-up no-limit: blinds $5/$10, both players start every hand with $500. You are always the small blind
+          and act first on every street.</li>
+        <li>Each simulation is fresh, so equity can move by a point or two between identical spots.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="doc-foot">
+    <a href="index.html">← Back to the table</a>
+    <a href="https://github.com/zhandolia/zeta-engine">Source on GitHub</a>
+  </footer>
+
+  <script type="module" src="poker/explore.js?v=7"></script>
+</body>
+
+</html>

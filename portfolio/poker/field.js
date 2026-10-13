@@ -46,7 +46,7 @@ function fieldValue(e, p, eq, po, streetIdx, aggr, handStr) {
 }
 
 /* ── Individual component values for commentary ── */
-function fieldComponents(eq, po, streetIdx, aggr, handStr) {
+export function fieldComponents(eq, po, streetIdx, aggr, handStr) {
     const en = eq / 100, pn = po / 100;
 
     return {
@@ -132,136 +132,69 @@ export function renderField(canvasId, equity, potOdds, streetIdx, aggr, handStr)
     ctx.shadowBlur = 0;
 
     // Axis labels
-    ctx.font = '10px JetBrains Mono, monospace';
-    ctx.fillStyle = '#808090';
+    ctx.font = '12px JetBrains Mono, monospace';
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.shadowColor = 'rgba(0,0,0,0.8)';
+    ctx.shadowBlur = 4;
     ctx.textAlign = 'center';
-    ctx.fillText('EQUITY →', W / 2, H - 4);
+    ctx.fillText('EQUITY →', W / 2, H - 8);
     ctx.save();
-    ctx.translate(12, H / 2);
+    ctx.translate(16, H / 2);
     ctx.rotate(-Math.PI / 2);
     ctx.fillText('POT ODDS →', 0, 0);
     ctx.restore();
-
-    // Title
-    ctx.font = 'bold 11px JetBrains Mono, monospace';
-    ctx.fillStyle = '#a0a8b8';
-    ctx.textAlign = 'center';
-    ctx.fillText('Ψ(e,p) ACTION FIELD', W / 2, 14);
+    ctx.shadowBlur = 0;
 }
 
-/* ── Generate model commentary (structured) ── */
-export function getCommentary(equity, potOdds, streetIdx, aggr, handStr, handName, action) {
-    const comps = fieldComponents(equity, potOdds, streetIdx, aggr, handStr);
-    const lines = [];
+/* ── Recommendation: equity vs. price of calling ──
+   Value-bet bar is 65% equity, +5 points per street.
+   Facing a bet: call within 5 points of break-even, never below 30%.
+   ev = dollar EV of calling: equity × (pot + call) − call. */
+const STREET_PHRASE = ['pre-flop', 'on the flop', 'on the turn', 'on the river'];
 
-    const entries = Object.entries(comps);
-    entries.sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
-    const top = entries[0];
-
-    const compNames = {
-        V: 'V_Equity', R: 'R_Raise', C: 'C_Call', F: 'F_Fold',
-        B: 'B_Bluff', S: 'S_Street', J: 'J_Jump', G: 'Γ_Str'
-    };
-
-    // Headline: current equity read
-    if (equity > 65) {
-        lines.push({ type: 'headline', text: '⚡ Strong position — field peaks in raise zone', color: 'green' });
-    } else if (equity > 45) {
-        lines.push({ type: 'headline', text: '📊 Mixed signal — moderate equity region', color: 'gold' });
-    } else if (equity > 30) {
-        lines.push({ type: 'headline', text: '⚠️ Marginal — field tilts toward defense', color: 'gold' });
-    } else {
-        lines.push({ type: 'headline', text: '🔻 Weak — field drops into fold territory', color: 'red' });
-    }
-
-    // Dominant driver
-    lines.push({ type: 'stat', text: `Dominant: ${compNames[top[0]]} = ${top[1].toFixed(1)}` });
-
-    // Pot odds analysis
-    if (potOdds > 0) {
-        const needed = potOdds;
-        if (equity > needed + 10) {
-            lines.push({ type: 'stat', text: `Eq ${equity.toFixed(0)}% > PO ${needed.toFixed(0)}% — +EV`, color: 'green' });
-        } else if (equity > needed - 5) {
-            lines.push({ type: 'stat', text: `Eq ${equity.toFixed(0)}% ≈ PO ${needed.toFixed(0)}% — marginal`, color: 'gold' });
-        } else {
-            lines.push({ type: 'stat', text: `Eq ${equity.toFixed(0)}% < PO ${needed.toFixed(0)}% — -EV`, color: 'red' });
-        }
-    } else {
-        lines.push({ type: 'stat', text: 'Free to act — no bet to face' });
-    }
-
-    // Component breakdown
-    const active = entries.filter(e => Math.abs(e[1]) > 3).slice(0, 3);
-    const breakdownStr = active.map(e => `${e[0]}=${e[1] > 0 ? '+' : ''}${e[1].toFixed(0)}`).join(' ');
-    lines.push({ type: 'detail', text: `Components: ${breakdownStr}` });
-
-    // Street context
-    const streetNames = [
-        'Pre-flop: wide ranges, high uncertainty',
-        'Flop: range narrows, equity crystallizes',
-        'Turn: critical street, pot commitment rises',
-        'River: final decision, maximum information'
-    ];
-    if (streetIdx >= 0 && streetIdx < 4) {
-        lines.push({ type: 'context', text: streetNames[streetIdx] });
-    }
-
-    return lines;
+export function valueBar(streetIdx) {
+    return 65 + 5 * streetIdx;
 }
 
-/* ── Get suggestion line for user ── */
-export function getSuggestion(equity, potOdds, streetIdx, handStr, toCall, pot) {
-    const eq = equity / 100;
-    const po = potOdds / 100;
+export function getRecommendation(equity, potOdds, streetIdx, toCall, pot) {
+    const facingBet = toCall > 0;
+    const ev = facingBet ? (equity / 100) * (pot + toCall) - toCall : 0;
+    const bar = valueBar(streetIdx);
+    const e = Math.round(equity), need = Math.round(potOdds);
+    const where = STREET_PHRASE[streetIdx] || '';
 
-    if (toCall <= 0) {
-        // No bet to face
-        if (eq > 0.65 + 0.04 * streetIdx) {
+    if (equity > bar) {
+        if (!facingBet) {
             const betSize = Math.max(10, Math.round(pot * 0.6));
-            return { text: `Bet $${betSize} for value — your hand is strong enough to build the pot`, icon: '💰' };
-        } else if (eq > 0.45) {
-            return { text: 'Check to control pot size — hand is decent but vulnerable', icon: '🎯' };
-        } else {
-            return { text: 'Check and see a free card — not worth building the pot here', icon: '👀' };
+            return {
+                action: 'BET', betSize, ev,
+                reason: `${e}% equity clears the ${bar}% value bar ${where}. Bet about 60% of the pot.`
+            };
         }
-    } else {
-        // Facing a bet
-        if (eq > 0.70) {
-            return { text: `Raise! You are well ahead — punish villain for betting into strength`, icon: '🚀' };
-        } else if (eq > po + 0.08) {
-            return { text: `Call — you have the equity to justify ($${toCall} into $${pot} pot)`, icon: '✅' };
-        } else if (eq > po - 0.03) {
-            return { text: `Close decision — calling is borderline, consider villain tendencies`, icon: '⚖️' };
-        } else {
-            return { text: `Fold — the price is too high relative to your equity`, icon: '🛑' };
-        }
+        return {
+            action: 'RAISE', ev,
+            reason: `${e}% equity is far above the ${need}% you need to call, and clears the ${bar}% value bar. Raise.`
+        };
     }
-}
-
-/* ── Get recommendation ── */
-export function getRecommendation(equity, potOdds, streetIdx, handStr) {
-    const eq = equity / 100;
-    const po = potOdds / 100;
-    const evCall = eq * (1 + 1 / Math.max(po, 0.01)) - 1;
-
-    let action, confidence, ev;
-    if (eq > 0.65 + 0.05 * streetIdx) {
-        action = 'RAISE';
-        confidence = Math.min(99, 60 + 40 * eq | 0);
-        ev = evCall * 1.5;
-    } else if (eq > po - 0.05 && eq > 0.30) {
-        action = 'CALL';
-        confidence = Math.min(95, 40 + 50 * eq | 0);
-        ev = evCall;
-    } else if (potOdds === 0) {
-        action = 'CHECK';
-        confidence = 70;
-        ev = 0;
-    } else {
-        action = 'FOLD';
-        confidence = Math.min(95, 50 + 40 * (1 - eq) | 0);
-        ev = 0;
+    if (!facingBet) {
+        return {
+            action: 'CHECK', ev,
+            reason: `${e}% equity is under the ${bar}% bar for betting ${where}. ` +
+                (streetIdx >= 3 ? 'Check and go to showdown for free.' : 'Check and see the next card for free.')
+        };
     }
-    return { action, confidence, ev };
+    if (equity > potOdds - 5 && equity > 30) {
+        return {
+            action: 'CALL', ev,
+            reason: equity >= potOdds
+                ? `Calling $${toCall} needs ${need}% equity and you have ${e}%.`
+                : `Close spot: calling $${toCall} needs ${need}% and you have ${e}%. The model still calls within 5 points of break-even.`
+        };
+    }
+    return {
+        action: 'FOLD', ev,
+        reason: equity <= 30 && equity > potOdds - 5
+            ? `${e}% equity is below the model's 30% floor for calling a bet.`
+            : `Calling $${toCall} needs ${need}% equity and you have only ${e}%.`
+    };
 }

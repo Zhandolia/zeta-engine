@@ -1,7 +1,7 @@
 /* ═══════════════════════════════════════════════════════════
    Poker Game — State Machine & AI Opponent
    ═══════════════════════════════════════════════════════════ */
-import { newDeck, shuffle, evalHand, monteCarlo, potOdds, HAND_NAMES } from './engine.js?v=6';
+import { newDeck, shuffle, evalHand, monteCarlo, potOdds, HAND_NAMES } from './engine.js?v=7';
 
 const STREETS = ['PREFLOP', 'FLOP', 'TURN', 'RIVER', 'SHOWDOWN'];
 const BIG_BLIND = 10;
@@ -36,6 +36,8 @@ export class PokerGame {
         this.deckIdx = 0;
         // Track whether the opponent has had a chance to act this round
         this.oppActed = false;
+        // Readable action history for the current hand
+        this.log = [];
     }
 
     deal() {
@@ -62,6 +64,7 @@ export class PokerGame {
         this.winner = null;
         this.oppActed = false; // BB hasn't acted yet (has option)
         this.message = 'Your action';
+        this.log = [`Blinds posted: you $${SMALL_BLIND}, villain $${BIG_BLIND}`];
         this.handsPlayed++;
 
         return this.getState();
@@ -104,6 +107,7 @@ export class PokerGame {
             handOver: this.handOver,
             winner: this.winner,
             message: this.message,
+            log: this.log.slice(),
             handName,
             equity,
             potOdds: po,
@@ -134,6 +138,7 @@ export class PokerGame {
         if (this.handOver || !this.isHeroTurn) return this.getState();
         this.winner = 'opp';
         this.message = 'You folded — Villain wins';
+        this.log.push('You fold');
         this.heroProfit -= (STARTING_STACK - this.heroStack);
         this.endHand();
         return this.getState();
@@ -142,6 +147,7 @@ export class PokerGame {
     heroCall() {
         if (this.handOver || !this.isHeroTurn) return this.getState();
         const call = Math.min(this.toCall, this.heroStack);
+        this.log.push(call > 0 ? `You call $${call}` : 'You check');
         this.heroStack -= call;
         this.pot += call;
         this.heroBet += call;
@@ -169,6 +175,7 @@ export class PokerGame {
         this.heroStack -= totalCall;
         this.pot += totalCall;
         this.heroBet += totalCall;
+        this.log.push(this.toCall > 0 ? `You raise to $${this.heroBet}` : `You bet $${totalCall}`);
         this.toCall = 0;
         this.minRaise = raise;
 
@@ -220,6 +227,7 @@ export class PokerGame {
             case 'fold':
                 this.winner = 'hero';
                 this.message = 'Villain folds — You win!';
+                this.log.push('Villain folds');
                 this.heroWins++;
                 this.heroProfit += this.pot - (STARTING_STACK - this.heroStack);
                 this.endHand();
@@ -227,6 +235,7 @@ export class PokerGame {
 
             case 'check':
                 this.message = 'Villain checks';
+                this.log.push(this.message);
                 // Both checked or hero called and opp checks → advance
                 this.advanceStreet();
                 break;
@@ -237,6 +246,7 @@ export class PokerGame {
                 this.pot += call;
                 this.oppBet += call;
                 this.message = `Villain calls $${call}`;
+                this.log.push(this.message);
                 // Check all-in
                 if (!this.checkAllIn()) {
                     // Both bets matched → advance
@@ -255,6 +265,7 @@ export class PokerGame {
                 this.oppBet += betSize;
                 this.toCall = this.oppBet - this.heroBet;
                 this.message = `Villain bets $${betSize}`;
+                this.log.push(this.message);
                 this.isHeroTurn = true;
                 break;
             }
@@ -269,6 +280,7 @@ export class PokerGame {
                 this.oppBet += total;
                 this.toCall = this.oppBet - this.heroBet;
                 this.message = `Villain raises to $${this.oppBet}`;
+                this.log.push(this.message);
                 this.isHeroTurn = true;
                 break;
             }
@@ -283,6 +295,7 @@ export class PokerGame {
         this.toCall = 0;
         this.oppActed = false;
         this.street++;
+        if (this.street <= 3) this.log.push(`— ${STREETS[this.street].toLowerCase()} —`);
 
         if (this.street === 1) {
             // Flop
@@ -326,6 +339,7 @@ export class PokerGame {
             this.winner = 'tie';
             this.message = `Split pot! Both have ${heroEval.name}`;
         }
+        this.log.push(`Showdown: you ${heroEval.name}, villain ${oppEval.name}`);
         this.endHand();
     }
 

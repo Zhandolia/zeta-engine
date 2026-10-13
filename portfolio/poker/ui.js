@@ -1,198 +1,137 @@
 /* ═══════════════════════════════════════════════════════════
    Poker UI — DOM Rendering & User Controls
    ═══════════════════════════════════════════════════════════ */
-import { cardHTML, cardBackHTML, cardStr } from './engine.js?v=6';
-import { renderField, getRecommendation, getCommentary, getSuggestion } from './field.js?v=6';
-import { PokerGame } from './game.js?v=6';
+import { cardHTML, cardBackHTML } from './engine.js?v=7';
+import { renderField, getRecommendation } from './field.js?v=7';
+import { PokerGame } from './game.js?v=7';
 
 const game = new PokerGame();
 
 function $(id) { return document.getElementById(id); }
 
-/* ── Card rendering ── */
-function renderCards(containerId, cards, show = true) {
-    const el = $(containerId);
-    if (!el) return;
-    if (!cards || cards.length === 0) {
-        el.innerHTML = '<span style="color:#555;font-family:var(--mono);font-size:0.8rem">—</span>';
-        return;
-    }
+const STREET_LABELS = ['Pre-flop', 'Flop', 'Turn', 'River', 'Showdown'];
+const ACTION_TONE = { RAISE: 'raise', BET: 'raise', CALL: 'call', CHECK: 'call', FOLD: 'fold' };
+
+const money = n => { const r = Math.round(n); return (r < 0 ? '-$' : '$') + Math.abs(r); };
+const signedMoney = n => (Math.round(n) >= 0 ? '+' : '') + money(n);
+const pct = n => n.toFixed(0) + '%';
+
+/* ── Cards ── */
+function renderCards(el, cards, show) {
     el.innerHTML = cards.map(c => show ? cardHTML(c) : cardBackHTML()).join('');
 }
 
-function renderCommunity(board) {
-    const el = $('community-cards');
-    if (!el) return;
+function renderBoard(board) {
     let html = '';
     for (let i = 0; i < 5; i++) {
-        html += i < board.length ? cardHTML(board[i]) : cardBackHTML();
+        html += i < board.length ? cardHTML(board[i]) : '<div class="card card-slot"></div>';
     }
-    el.innerHTML = html;
+    $('community-cards').innerHTML = html;
 }
 
-/* ── Commentary block (structured) ── */
-function updateCommentary(lines) {
-    const el = $('model-commentary');
-    if (!el) return;
-
-    const colorMap = { green: 'var(--green)', red: 'var(--red)', gold: 'var(--gold)' };
-
-    el.innerHTML = `<div class="commentary-header">MODEL INSIGHT</div>` +
-        lines.map(l => {
-            const cls = `c-${l.type}`;
-            const style = l.color ? ` style="color:${colorMap[l.color] || l.color}"` : '';
-            return `<div class="${cls}"${style}>${l.text}</div>`;
-        }).join('');
+function renderLog(log) {
+    $('action-log').innerHTML = log.slice(-3).map(l => `<li>${l}</li>`).join('');
 }
 
-/* ── Update entire UI from game state ── */
+/* ── Advisor: live decision ── */
+function showAdvice(state) {
+    const streetIdx = Math.max(0, state.streetIdx);
+    const handStr = state.heroEval ? state.heroEval.handRank : 0;
+    const aggr = state.toCall / Math.max(state.pot, 1);
+    const rec = getRecommendation(state.equity, state.potOdds, streetIdx, state.toCall, state.pot);
+
+    $('advice').dataset.tone = ACTION_TONE[rec.action];
+    $('rec-action').textContent = rec.action === 'BET'
+        ? `Bet $${rec.betSize}`
+        : rec.action[0] + rec.action.slice(1).toLowerCase();
+    $('rec-reason').textContent = rec.reason;
+
+    const facing = state.toCall > 0;
+    $('stat-equity').textContent = pct(state.equity);
+    $('stat-potodds').textContent = facing ? pct(state.potOdds) : 'free';
+    $('stat-ev').textContent = facing ? signedMoney(rec.ev) : '—';
+    $('stat-ev').dataset.tone = !facing ? '' : rec.ev >= 0 ? 'good' : 'bad';
+
+    renderField('field-canvas', state.equity, state.potOdds, streetIdx, aggr, handStr);
+    return rec;
+}
+
+/* ── Advisor: hand result ── */
+let profitBefore = 0;
+
+function showResult(state) {
+    const delta = state.heroProfit - profitBefore;
+    const tone = state.winner === 'hero' ? 'call' : state.winner === 'opp' ? 'fold' : 'neutral';
+    $('advice').dataset.tone = tone;
+    $('rec-action').textContent = state.winner === 'hero' ? `You win ${money(delta)}`
+        : state.winner === 'opp' ? `You lose ${money(-delta)}`
+            : 'Split pot';
+    $('rec-reason').textContent = state.message + '. Press Deal for the next hand.';
+}
+
+/* ── Full refresh from game state ── */
 function updateUI(state) {
-    // Cards
-    renderCards('hero-cards', state.heroHole, true);
-    renderCards('opp-cards', state.oppHole, state.handOver);
-    renderCommunity(state.board);
+    const live = state.heroHole.length === 2 && !state.handOver;
 
-    // Stacks & pot
-    $('hero-stack').textContent = `$${state.heroStack}`;
-    $('opp-stack').textContent = `$${state.oppStack}`;
-    $('pot-display').textContent = `POT: $${state.pot}`;
+    renderCards($('hero-cards'), state.heroHole, true);
+    renderCards($('opp-cards'), state.oppHole, state.handOver);
+    renderBoard(state.board);
+    renderLog(state.log);
+
+    $('hero-stack').textContent = money(state.heroStack);
+    $('opp-stack').textContent = money(state.oppStack);
+    $('pot-display').textContent = `Pot ${money(state.pot)}`;
+    $('street-label').textContent = state.handOver ? 'Hand over' : STREET_LABELS[state.streetIdx] || '';
+    $('hand-name').textContent = state.handName === '—' ? '' : state.handName;
 
     // Controls
-    const canAct = !state.handOver && state.isHeroTurn;
-    $('btn-fold').disabled = !canAct;
+    const canAct = live && state.isHeroTurn;
+    $('btn-fold').disabled = !canAct || state.toCall <= 0;
     $('btn-call').disabled = !canAct;
-    $('btn-raise').disabled = !canAct;
-    $('btn-deal').disabled = !state.handOver && state.streetIdx >= 0;
+    $('btn-raise').disabled = !canAct || state.heroStack <= state.toCall;
+    $('btn-deal').disabled = live;
+
+    let rec = null;
+    if (live) rec = showAdvice(state);
+    else if (state.handOver) showResult(state);
 
     if (canAct) {
-        $('btn-call').textContent = state.toCall > 0 ? `CALL $${state.toCall}` : 'CHECK';
+        $('btn-call').textContent = state.toCall > 0 ? `Call $${state.toCall}` : 'Check';
+        $('raise-label').textContent = state.toCall > 0 ? 'Raise +$' : 'Bet $';
         const slider = $('raise-slider');
+        const max = Math.max(state.minRaise, state.heroStack - state.toCall);
         slider.min = state.minRaise;
-        slider.max = Math.max(state.minRaise, state.heroStack - state.toCall);
-        slider.value = Math.min(slider.value, slider.max);
+        slider.max = max;
+        // Pre-set to the model's sizing (60% pot), clamped to what's allowed
+        const preset = rec && rec.betSize ? rec.betSize : Math.round(state.pot * 0.6);
+        slider.value = Math.min(max, Math.max(state.minRaise, preset));
         $('raise-val').textContent = slider.value;
     }
 
-    // ── Active hand: field + recommendation + commentary ──
-    if (state.heroHole.length === 2 && !state.handOver) {
-        const aggr = state.toCall / Math.max(state.pot, 1);
-        const handStr = state.heroEval ? state.heroEval.handRank : 0;
-        const streetIdx = Math.max(0, state.streetIdx);
-
-        renderField('field-canvas', state.equity, state.potOdds, streetIdx, aggr, handStr);
-
-        const rec = getRecommendation(state.equity, state.potOdds, streetIdx, handStr);
-
-        // Commentary
-        const commentary = getCommentary(
-            state.equity, state.potOdds, streetIdx, aggr, handStr,
-            state.handName, rec.action
-        );
-        updateCommentary(commentary);
-
-        // Suggestion line
-        const sug = getSuggestion(state.equity, state.potOdds, streetIdx, handStr, state.toCall, state.pot);
-        $('suggestion-icon').textContent = sug.icon;
-        $('suggestion-text').textContent = sug.text;
-
-        const colorMap = {
-            RAISE: '#ff2020', CALL: '#00ff80', FOLD: '#4080ff',
-            CHECK: '#00ff80', 'BLUFF RAISE': '#ff8000'
-        };
-        const recColor = colorMap[rec.action] || '#ffffff';
-
-        $('rec-action').textContent = `▶ ${rec.action}`;
-        $('rec-action').style.color = recColor;
-        $('rec-details').textContent =
-            `Equity: ${state.equity.toFixed(1)}%  |  Pot Odds: ${state.potOdds.toFixed(1)}%  |  EV: ${rec.ev >= 0 ? '+' : ''}${rec.ev.toFixed(2)}x  |  Confidence: ${rec.confidence}%`;
-        $('recommendation').style.borderColor = recColor;
-
-        // Field info
-        $('fi-equity').textContent = state.equity.toFixed(1) + '%';
-        $('fi-potodds').textContent = state.potOdds.toFixed(1) + '%';
-        $('fi-ev').textContent = (rec.ev >= 0 ? '+' : '') + rec.ev.toFixed(2) + 'x';
-
-        // ── Hand over: showdown / fold result ──
-    } else if (state.handOver) {
-        const winColor = state.winner === 'hero' ? '#00ff80' : state.winner === 'opp' ? '#ff4040' : '#ffd700';
-        $('rec-action').textContent = state.winner === 'hero' ? '🏆 YOU WIN' : state.winner === 'opp' ? '❌ VILLAIN WINS' : '🤝 SPLIT POT';
-        $('rec-action').style.color = winColor;
-        $('rec-details').textContent = state.message;
-        $('recommendation').style.borderColor = winColor;
-
-        // Showdown commentary
-        const endLines = [];
-        if (state.winner === 'hero') {
-            endLines.push('🏆 Field gradient confirmed: position was +EV');
-            endLines.push(`Result: ${state.message}`);
-        } else if (state.winner === 'opp') {
-            endLines.push('❌ Villain held stronger field position');
-            endLines.push(`Result: ${state.message}`);
-        } else {
-            endLines.push('🤝 Equal field values — split pot');
-        }
-        endLines.push('Click DEAL for next hand');
-        updateCommentary(endLines);
-
-        // Suggestion for showdown
-        $('suggestion-icon').textContent = '🃏';
-        $('suggestion-text').textContent = 'Press DEAL to play the next hand';
+    // Highlight whichever button the model suggests
+    const suggested = rec ? { FOLD: 'btn-fold', CALL: 'btn-call', CHECK: 'btn-call', RAISE: 'btn-raise', BET: 'btn-raise' }[rec.action] : 'btn-deal';
+    for (const id of ['btn-fold', 'btn-call', 'btn-raise', 'btn-deal']) {
+        $(id).classList.toggle('suggested', id === suggested && !$(id).disabled);
     }
 
-    // ── Stats panel (always update) ──
-    $('stat-street').textContent = state.street;
-    $('stat-hand').textContent = state.handName;
-    if (state.heroHole.length === 2) {
-        const rec2 = getRecommendation(state.equity, state.potOdds, Math.max(0, state.streetIdx), state.heroEval ? state.heroEval.handRank : 0);
-        $('stat-equity').textContent = state.equity.toFixed(1) + '%';
-        $('stat-equity').style.color = state.equity > 55 ? '#00ff80' : state.equity < 35 ? '#ff4040' : '#e0e0e0';
-        $('stat-potodds').textContent = state.potOdds.toFixed(1) + '%';
-        $('stat-ev').textContent = (rec2.ev >= 0 ? '+' : '') + rec2.ev.toFixed(2) + 'x';
-        $('stat-ev').style.color = rec2.ev >= 0 ? '#00ff80' : '#ff4040';
-        $('stat-conf').textContent = rec2.confidence + '%';
-    }
-    if (state.handOver) {
-        $('stat-street').textContent = 'SHOWDOWN';
-    }
-
-    // Session stats
-    $('stat-hands').textContent = state.handsPlayed;
-    $('stat-winrate').textContent = state.handsPlayed > 0
-        ? (state.heroWins / state.handsPlayed * 100).toFixed(0) + '%' : '—';
-    $('stat-profit').textContent = (state.heroProfit >= 0 ? '+$' : '-$') + Math.abs(state.heroProfit);
-    $('stat-profit').style.color = state.heroProfit >= 0 ? '#00ff80' : '#ff4040';
+    // Session
+    const finished = state.handsPlayed - (live ? 1 : 0);
+    $('stat-hands').textContent = finished;
+    $('stat-won').textContent = finished > 0 ? `${state.heroWins} (${pct(state.heroWins / finished * 100)})` : '—';
+    $('stat-profit').textContent = signedMoney(state.heroProfit);
+    $('stat-profit').dataset.tone = state.heroProfit > 0 ? 'good' : state.heroProfit < 0 ? 'bad' : '';
 }
 
-/* ── Public API (exposed to window for onclick handlers) ── */
-const pokerUI = {
-    newHand() {
-        const state = game.deal();
-        updateUI(state);
-    },
+/* ── Wiring ── */
+$('btn-deal').addEventListener('click', () => {
+    profitBefore = game.heroProfit;
+    updateUI(game.deal());
+});
+$('btn-fold').addEventListener('click', () => updateUI(game.heroFold()));
+$('btn-call').addEventListener('click', () => updateUI(game.heroCall()));
+$('btn-raise').addEventListener('click', () => updateUI(game.heroRaise(parseInt($('raise-slider').value, 10))));
+$('raise-slider').addEventListener('input', e => { $('raise-val').textContent = e.target.value; });
 
-    fold() {
-        const state = game.heroFold();
-        updateUI(state);
-    },
-
-    call() {
-        const state = game.heroCall();
-        updateUI(state);
-    },
-
-    raise() {
-        const amt = parseInt($('raise-slider').value);
-        const state = game.heroRaise(amt);
-        updateUI(state);
-    }
-};
-
-window.pokerUI = pokerUI;
-
-/* ── Slider live update ── */
-const slider = $('raise-slider');
-if (slider) {
-    slider.addEventListener('input', () => {
-        $('raise-val').textContent = slider.value;
-    });
-}
+// Open straight into a hand
+profitBefore = game.heroProfit;
+updateUI(game.deal());
