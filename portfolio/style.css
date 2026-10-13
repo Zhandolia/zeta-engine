@@ -82,9 +82,17 @@ select {
   font-size: 1.05rem;
   color: var(--accent);
   text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand img {
+  display: block;
 }
 
 .brand span {
+  margin-left: -4px;
   color: var(--muted);
   font-weight: 400;
 }

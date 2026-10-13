@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="ζ-Field Poker">
+  <defs>
+    <linearGradient id="zf-field" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#103ca0"/>
+      <stop offset="0.45" stop-color="#30c0c8"/>
+      <stop offset="0.75" stop-color="#b4f050"/>
+      <stop offset="1" stop-color="#e8401a"/>
+    </linearGradient>
+  </defs>
+  <rect x="1" y="1" width="30" height="30" rx="7" fill="url(#zf-field)"/>
+  <path d="M10.5 7.5 H21.5 C15 11.5 9.5 15.5 9.5 19.5 C9.5 23 13 23.5 17 24 C20 24.4 21 25.8 19.5 28"
+    fill="none" stroke="#0a0e16" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
